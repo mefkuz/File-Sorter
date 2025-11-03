@@ -20,7 +20,7 @@ Once you run it for the first time, it installs itself automatically, allowing y
 
 ## ⚙️ Installation & First Run
 
-### 1️⃣ Clone the repository in linux
+###  Clone the repository in linux
 
 ```bash
 git clone https://github.com/username/file_sorter.git
