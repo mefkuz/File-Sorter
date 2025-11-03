@@ -1,0 +1,16 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Sistem dosyaları
+.DS_Store      # macOS
+Thumbs.db      # Windows
+
+# Sanal ortamlar (opsiyonel, varsa)
+.env/
+venv/
+ENV/
+
+# Diğer geçici dosyalar
+*.log
