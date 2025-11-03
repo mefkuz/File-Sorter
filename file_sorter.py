@@ -74,3 +74,16 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+try:
+    shutil.move(file_path, os.path.join(target_folder, filename))
+except Exception as e:
+    print(f"Failed to move {filename}: {e}")
+
+base, ext = os.path.splitext(filename)
+counter = 1
+new_name = filename
+while os.path.exists(os.path.join(target_folder, new_name)):
+    new_name = f"{base}_{counter}{ext}"
+    counter += 1
+shutil.move(file_path, os.path.join(target_folder, new_name))
