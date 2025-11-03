@@ -78,17 +78,6 @@ file_sorter /home/user/Downloads
 
 This will sort all files in the specified folder into subfolders named after their extensions.
 
-**Example result:**
-
-Downloads/
-├── jpg/
-│   ├── photo1.jpg
-│   └── photo2.jpg
-├── pdf/
-│   └── document.pdf
-└── no_extension/
-    └── README
-
 
 
 * 2. GUI Mode
