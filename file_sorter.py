@@ -23,7 +23,20 @@ def sort_files_terminal(folder):
             ext = filename.split('.')[-1].lower()
             target_folder = os.path.join(folder, ext)
             os.makedirs(target_folder, exist_ok=True)
-            shutil.move(file_path, os.path.join(target_folder, filename))
+
+            # Dosya çakışmasını önlemek ve hata kontrolü
+            base, extension = os.path.splitext(filename)
+            new_name = filename
+            counter = 1
+            while os.path.exists(os.path.join(target_folder, new_name)):
+                new_name = f"{base}_{counter}{extension}"
+                counter += 1
+
+            try:
+                shutil.move(file_path, os.path.join(target_folder, new_name))
+            except Exception as e:
+                print(f"Failed to move {filename}: {e}")
+
     print("Files have been sorted by their extensions.")
 
 def run_gui():
@@ -74,16 +87,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-try:
-    shutil.move(file_path, os.path.join(target_folder, filename))
-except Exception as e:
-    print(f"Failed to move {filename}: {e}")
-
-base, ext = os.path.splitext(filename)
-counter = 1
-new_name = filename
-while os.path.exists(os.path.join(target_folder, new_name)):
-    new_name = f"{base}_{counter}{ext}"
-    counter += 1
-shutil.move(file_path, os.path.join(target_folder, new_name))
