@@ -5,7 +5,7 @@ It supports both **terminal (CLI)** and **graphical user interface (GUI)** modes
 
 Once you run it for the first time, it installs itself automatically, allowing you to use `file_sorter` directly from the terminal anytime.
 
----
+
 
 ## ✨ Features
 
@@ -16,7 +16,7 @@ Once you run it for the first time, it installs itself automatically, allowing y
 - 🪟 Cross-platform: **Linux**, **macOS**, and **Windows**.
 - 🧼 Clean and simple interface.
 
----
+
 
 ## ⚙️ Installation & First Run
 
