@@ -5,7 +5,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-__version__ = "2.2"
+__version__ = "2.0"
 
 # -------------------------
 # Paket kontrolü
