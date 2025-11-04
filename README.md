@@ -44,7 +44,7 @@ python3 --version
 
 `~/bin/file_sorter` on Linux/macOS
 
-'%USERPROFILE\AppData\Local\Programs\file_sorter' on Windows
+`%USERPROFILE\AppData\Local\Programs\file_sorter` on Windows
 
 
 After installation, you can use it directly from the terminal:
