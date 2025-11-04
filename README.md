@@ -38,23 +38,6 @@ cd file_sorter
 python3 --version
 ```
 
-##  Install Tkinter for GUI
-
-
-* On Ubuntu/Debian:
- ```bash
-sudo apt install python3-tk
-```
-
-* On macOS (if using Homebrew):
- ```bash
-brew install python-tk
- ```
-
-* On Windows:
-Tkinter is included by default with Python.
-
-
 ## Run the program for the first time
 
  On first run, the app installs itself automatically to:
@@ -69,8 +52,6 @@ After installation, you can use it directly from the terminal:
  ```bash
 file_sorter
  ```
-
-
 
 ## Usage
 
