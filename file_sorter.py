@@ -5,7 +5,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-__version__ = "2.0"
+__version__ = "2.2"
 
 # -------------------------
 # Paket kontrolü
@@ -73,6 +73,7 @@ MESSAGES = {
         "errors": "Errors: {}",
         "skipped": "Skipped: {}",
         "include_subfolders": "Include Subfolders",
+        "use_categories": "Sort by Categories",
         "select_folder_error": "Please select a folder.",
         "confirm_gui_sort": "Are you sure you want to sort the files?",
         "result_sorted": "Files have been sorted!",
@@ -93,6 +94,7 @@ MESSAGES = {
         "errors": "Hata sayısı: {}",
         "skipped": "Atlanan: {}",
         "include_subfolders": "Alt Klasörleri Dahil Et",
+        "use_categories": "Kategorilere Göre Sırala",
         "select_folder_error": "Lütfen bir klasör seçin.",
         "confirm_gui_sort": "Dosyaları sıralamak istediğinizden emin misiniz?",
         "result_sorted": "Dosyalar sıralandı!",
@@ -109,16 +111,32 @@ def log_msg(key, *args, level="INFO", gui_widget=None):
     log(msg, level, gui_widget)
 
 # -------------------------
+# Kategori tanımları
+# -------------------------
+CATEGORIES = {
+    "Resimler": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+    "Videolar": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv"],
+    "Müzikler": [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"],
+    "Belgeler": [".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".ppt", ".pptx"],
+    "Arşivler": [".zip", ".rar", ".7z", ".tar", ".gz"],
+    "Programlar": [".exe", ".msi", ".apk", ".bat", ".sh", ".app"],
+}
+
+def get_category_for_extension(ext: str) -> str:
+    ext = ext.lower()
+    for category, exts in CATEGORIES.items():
+        if ext in exts:
+            return category
+    return "Diğer"
+
+# -------------------------
 # Dil seçimi
 # -------------------------
 def choose_language():
     global LANG
     if LANG is None:
         lang_choice = input("Select language / Dil seçin (EN/TR): ").strip().upper()
-        if lang_choice in ("EN", "TR"):
-            LANG = lang_choice
-        else:
-            LANG = "EN"
+        LANG = "TR" if lang_choice == "TR" else "EN"
 
 # -------------------------
 # Dosya istatistikleri
@@ -128,27 +146,22 @@ def get_file_stats(folder: str, include_subfolders: bool = False):
     files = []
     extensions = {}
 
-    if include_subfolders:
-        for root_dir, _, filenames in os.walk(folder):
-            for f in filenames:
-                file_path = os.path.join(root_dir, f)
+    walker = os.walk(folder) if include_subfolders else [(folder, [], os.listdir(folder))]
+    for root_dir, _, filenames in walker:
+        for f in filenames:
+            file_path = os.path.join(root_dir, f)
+            if os.path.isfile(file_path):
                 files.append(file_path)
                 all_items.append(file_path)
                 ext = os.path.splitext(f)[1].lstrip('.').lower() or "no_extension"
                 extensions[ext] = extensions.get(ext, 0) + 1
-    else:
-        all_items = os.listdir(folder)
-        files = [os.path.join(folder, f) for f in all_items if os.path.isfile(os.path.join(folder, f))]
-        for f in files:
-            ext = os.path.splitext(f)[1].lstrip('.').lower() or "no_extension"
-            extensions[ext] = extensions.get(ext, 0) + 1
 
     return all_items, files, extensions
 
 # -------------------------
-# Dosya taşıma ve ilerleme çubuğu
+# Dosya taşıma fonksiyonu
 # -------------------------
-def move_files_with_progress(folder: str, include_subfolders: bool = False, auto_confirm: bool = False, gui_widget=None):
+def move_files_with_progress(folder: str, include_subfolders: bool = False, use_categories: bool = False, auto_confirm: bool = False, gui_widget=None):
     if not os.path.exists(folder):
         log_msg("folder_not_found", folder, level="ERROR", gui_widget=gui_widget)
         return
@@ -160,28 +173,22 @@ def move_files_with_progress(folder: str, include_subfolders: bool = False, auto
 
     log(f"Folder: {folder}", level="INFO", gui_widget=gui_widget)
     log(f"Total items: {len(all_items)} | Files: {len(files)}", level="INFO", gui_widget=gui_widget)
-    log("File types:", level="INFO", gui_widget=gui_widget)
-    for ext, count in extensions.items():
-        log(f"  • {ext}: {count}", level="INFO", gui_widget=gui_widget)
-
-    if not auto_confirm:
-        confirm_text = MESSAGES[LANG]["confirm_text"].format(len(all_items), len(files),
-                                                            "\n".join([f"  • {k}: {v}" for k, v in extensions.items()]))
-        confirm = input(f"{confirm_text} (y/n): ").strip().lower()
-        if confirm not in ('y', 'e'):
-            log_msg("sorting_canceled", level="WARNING", gui_widget=gui_widget)
-            return
 
     moved_count = 0
     error_count = 0
     total_files = len(files)
 
-    log("\nSorting files:", level="INFO", gui_widget=gui_widget)
     for idx, file_path in enumerate(files, start=1):
         folder_path, filename = os.path.split(file_path)
         base, extension = os.path.splitext(filename)
-        ext = extension.lstrip('.').lower() or "no_extension"
-        target_folder = os.path.join(folder, ext)
+        ext = extension.lower()
+
+        if use_categories:
+            target_folder_name = get_category_for_extension(ext)
+        else:
+            target_folder_name = ext.lstrip('.') or "no_extension"
+
+        target_folder = os.path.join(folder, target_folder_name)
         os.makedirs(target_folder, exist_ok=True)
 
         dest = Path(target_folder) / filename
@@ -193,7 +200,7 @@ def move_files_with_progress(folder: str, include_subfolders: bool = False, auto
         try:
             shutil.move(file_path, dest)
             moved_count += 1
-            log(f"{filename} → {target_folder}", level="ACTION", gui_widget=gui_widget)
+            log(f"{filename} → {target_folder_name}", level="ACTION", gui_widget=gui_widget)
         except Exception as e:
             error_count += 1
             log(f"Could not move {filename}: {e}", level="ERROR", gui_widget=gui_widget)
@@ -223,10 +230,9 @@ def run_gui():
 
     root = ctk.CTk()
     root.title(f"File Sorter v{__version__}")
-    root.geometry("600x400")
+    root.geometry("600x450")
     root.resizable(False, False)
 
-    # Klasör seçimi
     folder_frame = ctk.CTkFrame(root)
     folder_frame.pack(pady=20, padx=20, fill="x")
 
@@ -246,21 +252,15 @@ def run_gui():
                                command=browse_folder, fg_color="white", text_color="black")
     browse_btn.pack(side="left", padx=(5, 0))
 
-    # Alt klasörleri dahil et seçeneği
     include_var = ctk.BooleanVar(value=False)
     include_cb = ctk.CTkCheckBox(root, text=MESSAGES[LANG]["include_subfolders"], variable=include_var)
-    include_cb.pack(pady=(5, 10), padx=20, anchor="w")
+    include_cb.pack(pady=(5, 5), padx=20, anchor="w")
 
-    # Dosyaları Sırala butonu
-    sort_btn = ctk.CTkButton(root, text=MESSAGES[LANG]["sort_button"], command=lambda: sort_files_gui(),
-                             fg_color="white", text_color="black")
-    sort_btn.pack(pady=(0, 10))
+    category_var = ctk.BooleanVar(value=True)
+    category_cb = ctk.CTkCheckBox(root, text=MESSAGES[LANG]["use_categories"], variable=category_var)
+    category_cb.pack(pady=(0, 10), padx=20, anchor="w")
 
-    # Log alanı
     log_frame = ctk.CTkFrame(root)
-    log_frame.pack(pady=5, padx=20, fill="both", expand=True)
-    log_frame.pack_forget()
-
     log_text = ctk.CTkTextbox(log_frame, width=560, height=150)
     log_text.pack(fill="both", expand=True)
 
@@ -270,13 +270,17 @@ def run_gui():
             messagebox.showwarning(MESSAGES[LANG]["error_title"], MESSAGES[LANG]["select_folder_error"])
             return
         include_subfolders = include_var.get()
+        use_categories = category_var.get()
         confirm = messagebox.askyesno(MESSAGES[LANG]["confirm_title"], MESSAGES[LANG]["confirm_gui_sort"])
         if confirm:
             log_frame.pack(pady=5, padx=20, fill="both", expand=True)
-            move_files_with_progress(folder, include_subfolders=include_subfolders, gui_widget=log_text)
+            move_files_with_progress(folder, include_subfolders, use_categories, gui_widget=log_text)
             messagebox.showinfo(MESSAGES[LANG]["result_title"], MESSAGES[LANG]["result_sorted"])
 
-    # Footer - sağ alt köşede
+    sort_btn = ctk.CTkButton(root, text=MESSAGES[LANG]["sort_button"], command=sort_files_gui,
+                             fg_color="white", text_color="black")
+    sort_btn.pack(pady=(0, 10))
+
     footer = ctk.CTkLabel(root, text="made by mefkuz", fg_color=None, text_color="gray")
     footer.pack(side="bottom", anchor="e", padx=10, pady=5)
 
@@ -292,7 +296,8 @@ def run_cli():
         log_msg("select_folder_error", level="ERROR")
         return
     include_subfolders = input("Include subfolders? (y/n): ").strip().lower() in ("y", "e")
-    move_files_with_progress(folder, include_subfolders=include_subfolders)
+    use_categories = input("Sort by categories? (y/n): ").strip().lower() in ("y", "e")
+    move_files_with_progress(folder, include_subfolders, use_categories)
 
 # -------------------------
 # Main
