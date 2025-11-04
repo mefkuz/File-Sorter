@@ -1,0 +1,7 @@
+--- TR ---
+
+v2.4 - otomatik güncelleme eklendi
+
+--- EN ---
+
+v2.4 - automatic update added
