@@ -5,7 +5,7 @@ import sys
 import subprocess
 from pathlib import Path
 
-__version__ = "2.0"
+__version__ = "2.3"
 
 # -------------------------
 # Paket kontrolü
@@ -111,23 +111,36 @@ def log_msg(key, *args, level="INFO", gui_widget=None):
     log(msg, level, gui_widget)
 
 # -------------------------
-# Kategori tanımları
+# Kategori tanımları (çok dilli)
 # -------------------------
 CATEGORIES = {
-    "Resimler": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
-    "Videolar": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv"],
-    "Müzikler": [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"],
-    "Belgeler": [".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".ppt", ".pptx"],
-    "Arşivler": [".zip", ".rar", ".7z", ".tar", ".gz"],
-    "Programlar": [".exe", ".msi", ".apk", ".bat", ".sh", ".app"],
+    "TR": {
+        "Resimler": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+        "Videolar": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv"],
+        "Müzikler": [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"],
+        "Belgeler": [".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".ppt", ".pptx"],
+        "Arşivler": [".zip", ".rar", ".7z", ".tar", ".gz"],
+        "Programlar": [".exe", ".msi", ".apk", ".bat", ".sh", ".app"],
+        "Diğer": []
+    },
+    "EN": {
+        "Images": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
+        "Videos": [".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv"],
+        "Music": [".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"],
+        "Documents": [".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx", ".ppt", ".pptx"],
+        "Archives": [".zip", ".rar", ".7z", ".tar", ".gz"],
+        "Programs": [".exe", ".msi", ".apk", ".bat", ".sh", ".app"],
+        "Others": []
+    }
 }
 
-def get_category_for_extension(ext: str) -> str:
+def get_category_for_extension(ext: str, lang: str) -> str:
     ext = ext.lower()
-    for category, exts in CATEGORIES.items():
+    for category, exts in CATEGORIES[lang].items():
         if ext in exts:
             return category
-    return "Diğer"
+    # Eğer eşleşme yoksa “Diğer” / “Others”
+    return "Diğer" if lang == "TR" else "Others"
 
 # -------------------------
 # Dil seçimi
@@ -184,9 +197,9 @@ def move_files_with_progress(folder: str, include_subfolders: bool = False, use_
         ext = extension.lower()
 
         if use_categories:
-            target_folder_name = get_category_for_extension(ext)
+            target_folder_name = get_category_for_extension(ext, LANG)
         else:
-            target_folder_name = ext.lstrip('.') or "no_extension"
+            target_folder_name = ext.lstrip('.') or ("no_extension" if LANG == "EN" else "uzantısız")
 
         target_folder = os.path.join(folder, target_folder_name)
         os.makedirs(target_folder, exist_ok=True)
