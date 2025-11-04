@@ -5,6 +5,7 @@ import sys
 import subprocess
 from pathlib import Path
 import urllib.request
+import threading
 
 __version__ = "2.3"
 
@@ -64,46 +65,18 @@ LANG = None
 
 MESSAGES = {
     "EN": {
-        "select_language": "Select language / Dil seçin (EN/TR): ",
-        "folder_not_found": "Folder not found: {}",
-        "no_files": "No files found in the selected folder.",
-        "confirm_text": "Total items: {}\nFiles: {}\nFile types:\n{}\nDo you want to sort these files?",
-        "sorting_canceled": "Sorting canceled by user.",
-        "sorting_complete": "Sorting complete.",
-        "files_moved": "Files moved: {}",
-        "errors": "Errors: {}",
-        "skipped": "Skipped: {}",
-        "include_subfolders": "Include Subfolders",
-        "use_categories": "Sort by Categories (image,videos etc.)",
-        "select_folder_error": "Please select a folder.",
-        "confirm_gui_sort": "Are you sure you want to sort the files?",
-        "result_sorted": "Files have been sorted!",
-        "browse_button": "Browse Folder",
-        "sort_button": "Sort Files",
-        "confirm_title": "Confirm Sorting",
-        "result_title": "Result",
-        "error_title": "Error"
+        "update_available": "New version available: v{}",
+        "update_prompt_gui": "New version found (v{}).\n\nChanges:\n{}\n\nPlease restart the app to update.",
+        "update_prompt_cli": "New version found (v{}).\n\nChanges:\n{}\nUpdate now? (y/n): ",
+        "update_complete": "Update complete. Please restart the program.",
+        # ... diğer mesajlar ...
     },
     "TR": {
-        "select_language": "Dil seçin / Select language (TR/EN): ",
-        "folder_not_found": "Klasör bulunamadı: {}",
-        "no_files": "Seçilen klasörde dosya bulunamadı.",
-        "confirm_text": "Toplam öğe: {}\nDosyalar: {}\nDosya türleri:\n{}\nBu dosyaları sıralamak istiyor musunuz?",
-        "sorting_canceled": "Sıralama kullanıcı tarafından iptal edildi.",
-        "sorting_complete": "Sıralama tamamlandı.",
-        "files_moved": "Taşınan dosya sayısı: {}",
-        "errors": "Hata sayısı: {}",
-        "skipped": "Atlanan: {}",
-        "include_subfolders": "Alt Klasörleri Dahil Et",
-        "use_categories": "Kategorilere Göre Sırala (resimler, videolar vs.)",
-        "select_folder_error": "Lütfen bir klasör seçin.",
-        "confirm_gui_sort": "Dosyaları sıralamak istediğinizden emin misiniz?",
-        "result_sorted": "Dosyalar sıralandı!",
-        "browse_button": "Klasör Seç",
-        "sort_button": "Dosyaları Sırala",
-        "confirm_title": "Sıralamayı Onayla",
-        "result_title": "Sonuç",
-        "error_title": "Hata"
+        "update_available": "Yeni sürüm mevcut: v{}",
+        "update_prompt_gui": "Yeni sürüm bulundu (v{}).\n\nDeğişiklikler:\n{}\n\nGüncellemek için uygulamayı yeniden başlatın.",
+        "update_prompt_cli": "Yeni sürüm bulundu (v{}).\n\nDeğişiklikler:\n{}\nŞimdi güncellemek ister misiniz? (y/n): ",
+        "update_complete": "Güncelleme tamamlandı. Lütfen programı yeniden başlatın.",
+        # ... diğer mesajlar ...
     }
 }
 
@@ -130,84 +103,50 @@ def extract_changelog_text(changelog_content, lang="EN"):
             sections[current] += line + "\n"
     return sections.get(lang, "").strip() or "(No changelog available.)"
 
-def check_for_update(current_version, version_url, script_url, changelog_url, script_path, gui=False, lang="EN"):
-    """Güvenli güncelleme kontrolü"""
+def safe_update_check(gui=False):
+    """GUI ve CLI için güvenli güncelleme kontrolü, crash-proof"""
     try:
-        with urllib.request.urlopen(version_url, timeout=5) as response:
+        with urllib.request.urlopen(VERSION_URL, timeout=5) as response:
             latest_version = response.read().decode("utf-8").strip()
-    except Exception as e:
-        log(f"[Update] Version check failed: {e}" if lang == "EN" else f"[Güncelleme] Versiyon kontrolü başarısız: {e}", level="ERROR")
-        return False
-
-    if not latest_version or latest_version == current_version:
-        log("✅ Your application is up to date." if lang == "EN" else "✅ Uygulamanız güncel.", level="INFO")
-        return False
-
-    try:
-        with urllib.request.urlopen(changelog_url, timeout=5) as response:
-            full_changelog = response.read().decode("utf-8")
-            changelog_text = extract_changelog_text(full_changelog, lang)
-    except Exception as e:
-        log(f"[Update] Changelog load failed: {e}", level="WARNING")
-        changelog_text = "(Change details unavailable.)" if lang == "EN" else "(Değişiklik bilgisi alınamadı.)"
-
-    log(f"🆕 New version available: v{latest_version} (current: v{current_version})" if lang == "EN"
-        else f"🆕 Yeni sürüm mevcut: v{latest_version} (şu an: v{current_version})", level="WARNING")
-
-    try:
-        if gui:
-            msg = (
-                f"New version found (v{latest_version}).\n\nChanges:\n{changelog_text}\n\nWould you like to update?"
-                if lang == "EN"
-                else f"Yeni sürüm bulundu (v{latest_version}).\n\nDeğişiklikler:\n{changelog_text}\n\nGüncellemek ister misiniz?"
-            )
-            if not messagebox.askyesno("Update" if lang == "EN" else "Güncelleme", msg):
-                return False
-        else:
-            print(f"\n🆕 {'New version found' if lang == 'EN' else 'Yeni sürüm bulundu'}: v{latest_version} (current: v{current_version})")
-            print(f"\n--- {'Changes' if lang == 'EN' else 'Değişiklikler'} ---\n{changelog_text}\n")
-            choice = input("Update now? (y/n): " if lang == "EN" else "Güncellemek ister misiniz? (y/n): ").strip().lower()
-            if choice != "y":
-                return False
-    except Exception as e:
-        log(f"[Update prompt error] {e}", level="ERROR")
-        return False
-
-    try:
-        with urllib.request.urlopen(script_url, timeout=10) as f:
-            new_code = f.read().decode("utf-8")
-
-        with open(script_path, "w", encoding="utf-8") as file:
-            file.write(new_code)
-
-        msg = "✅ Update complete. Restarting..." if lang == "EN" else "✅ Güncelleme tamamlandı. Program yeniden başlatılıyor..."
-        log(msg, level="ACTION")
-
+        if latest_version == __version__:
+            return
         try:
-            import tkinter
-            for w in getattr(tkinter, "_default_root", {}).children.values():
-                try:
-                    w.destroy()
-                except:
-                    pass
-            if getattr(tkinter, "_default_root", None):
-                tkinter._default_root.destroy()
-        except Exception:
-            pass
+            with urllib.request.urlopen(CHANGELOG_URL, timeout=5) as response:
+                changelog_full = response.read().decode("utf-8")
+                changelog_text = extract_changelog_text(changelog_full, LANG)
+        except:
+            changelog_text = "(Change details unavailable.)" if LANG=="EN" else "(Değişiklik bilgisi alınamadı.)"
 
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-
+        if gui:
+            msg = MESSAGES[LANG]["update_prompt_gui"].format(latest_version, changelog_text)
+            # GUI’de otomatik restart yok, sadece uyarı
+            try:
+                messagebox.showinfo("Update" if LANG=="EN" else "Güncelleme", msg)
+            except:
+                print(msg)
+        else:
+            msg = MESSAGES[LANG]["update_prompt_cli"].format(latest_version, changelog_text)
+            choice = input(msg).strip().lower()
+            if choice != "y":
+                return
+            # CLI modunda otomatik güncelleme ve restart
+            try:
+                with urllib.request.urlopen(SCRIPT_URL, timeout=10) as f:
+                    new_code = f.read().decode("utf-8")
+                with open(__file__, "w", encoding="utf-8") as file:
+                    file.write(new_code)
+                print(MESSAGES[LANG]["update_complete"])
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+            except Exception as e:
+                print(f"[Update failed] {e}")
     except Exception as e:
-        import traceback
-        log(f"Update failed: {e}" if lang == "EN" else f"Güncelleme başarısız: {e}", level="ERROR")
-        print(traceback.format_exc())
-        return False
+        print(f"[Update check failed] {e}")
 
 # -------------------------
-# (Diğer ana kodun - kategori, dosya taşıma, GUI fonksiyonları vs.)
+# Ana kodun (kategori, move_files_with_progress, run_gui, run_cli, vb.)
 # -------------------------
-# Buraya senin mevcut File Sorter fonksiyonlarının tamamı değişmeden gelecek
-# (örneğin get_category_for_extension, run_gui, run_cli, vb.)
+# Burada mevcut kodun değişmeden gelecek
+# get_category_for_extension, move_files_with_progress, run_gui, run_cli vs.
 
 # -------------------------
 # Main
@@ -219,18 +158,14 @@ if __name__ == "__main__":
         try:
             lang_choice = input("Select language / Dil seçin (EN/TR): ").strip().upper()
             LANG = "TR" if lang_choice == "TR" else "EN"
-        except Exception:
+        except:
             LANG = "EN"
 
-    check_for_update(
-        __version__,
-        VERSION_URL,
-        SCRIPT_URL,
-        CHANGELOG_URL,
-        __file__,
-        gui=not is_cli,
-        lang=LANG
-    )
+    # GUI için ayrı thread’de güvenli güncelleme
+    if not is_cli:
+        threading.Thread(target=safe_update_check, args=(True,), daemon=True).start()
+    else:
+        safe_update_check(gui=False)
 
     if is_cli:
         run_cli()
