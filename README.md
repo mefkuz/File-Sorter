@@ -101,7 +101,7 @@ A graphical window will appear:
 3. A success message will appear once sorting is complete.
 
 
-Supported Languages
+# Supported Languages
 
 - English (EN)
 
