@@ -4,7 +4,7 @@ import shutil
 import sys
 import subprocess
 from pathlib import Path
-import urllib.request  # 🔹 Güncelleme sistemi için eklendi
+import urllib.request
 
 __version__ = "2.3"
 
@@ -112,7 +112,7 @@ def log_msg(key, *args, level="INFO", gui_widget=None):
     log(msg, level, gui_widget)
 
 # -------------------------
-# Güncelleme sistemi (EN/TR + tek changelog dosyası)
+# Güncelleme sistemi
 # -------------------------
 VERSION_URL = "https://raw.githubusercontent.com/mefkuz/File-Sorter/main/Versiyon.txt"
 SCRIPT_URL = "https://raw.githubusercontent.com/mefkuz/File-Sorter/main/file_sorter.py"
@@ -131,14 +131,15 @@ def extract_changelog_text(changelog_content, lang="EN"):
     return sections.get(lang, "").strip() or "(No changelog available.)"
 
 def check_for_update(current_version, version_url, script_url, changelog_url, script_path, gui=False, lang="EN"):
+    """Güvenli güncelleme kontrolü"""
     try:
         with urllib.request.urlopen(version_url, timeout=5) as response:
             latest_version = response.read().decode("utf-8").strip()
     except Exception as e:
-        log(f"Update check failed: {e}" if lang == "EN" else f"Güncelleme kontrolü başarısız: {e}", level="ERROR")
+        log(f"[Update] Version check failed: {e}" if lang == "EN" else f"[Güncelleme] Versiyon kontrolü başarısız: {e}", level="ERROR")
         return False
 
-    if latest_version == current_version:
+    if not latest_version or latest_version == current_version:
         log("✅ Your application is up to date." if lang == "EN" else "✅ Uygulamanız güncel.", level="INFO")
         return False
 
@@ -146,47 +147,67 @@ def check_for_update(current_version, version_url, script_url, changelog_url, sc
         with urllib.request.urlopen(changelog_url, timeout=5) as response:
             full_changelog = response.read().decode("utf-8")
             changelog_text = extract_changelog_text(full_changelog, lang)
-    except Exception:
+    except Exception as e:
+        log(f"[Update] Changelog load failed: {e}", level="WARNING")
         changelog_text = "(Change details unavailable.)" if lang == "EN" else "(Değişiklik bilgisi alınamadı.)"
 
     log(f"🆕 New version available: v{latest_version} (current: v{current_version})" if lang == "EN"
         else f"🆕 Yeni sürüm mevcut: v{latest_version} (şu an: v{current_version})", level="WARNING")
 
-    if gui:
-        msg = (
-            f"New version found (v{latest_version}).\n\nChanges:\n{changelog_text}\n\nWould you like to update?"
-            if lang == "EN"
-            else f"Yeni sürüm bulundu (v{latest_version}).\n\nDeğişiklikler:\n{changelog_text}\n\nGüncellemek ister misiniz?"
-        )
-        if not messagebox.askyesno("Update" if lang == "EN" else "Güncelleme", msg):
-            return False
-    else:
-        print(f"\n🆕 {'New version found' if lang == 'EN' else 'Yeni sürüm bulundu'}: v{latest_version} (current: v{current_version})")
-        print(f"\n--- {'Changes' if lang == 'EN' else 'Değişiklikler'} ---\n{changelog_text}\n")
-        choice = input("Update now? (y/n): " if lang == "EN" else "Güncellemek ister misiniz? (y/n): ").strip().lower()
-        if choice != "y":
-            return False
+    try:
+        if gui:
+            msg = (
+                f"New version found (v{latest_version}).\n\nChanges:\n{changelog_text}\n\nWould you like to update?"
+                if lang == "EN"
+                else f"Yeni sürüm bulundu (v{latest_version}).\n\nDeğişiklikler:\n{changelog_text}\n\nGüncellemek ister misiniz?"
+            )
+            if not messagebox.askyesno("Update" if lang == "EN" else "Güncelleme", msg):
+                return False
+        else:
+            print(f"\n🆕 {'New version found' if lang == 'EN' else 'Yeni sürüm bulundu'}: v{latest_version} (current: v{current_version})")
+            print(f"\n--- {'Changes' if lang == 'EN' else 'Değişiklikler'} ---\n{changelog_text}\n")
+            choice = input("Update now? (y/n): " if lang == "EN" else "Güncellemek ister misiniz? (y/n): ").strip().lower()
+            if choice != "y":
+                return False
+    except Exception as e:
+        log(f"[Update prompt error] {e}", level="ERROR")
+        return False
 
     try:
         with urllib.request.urlopen(script_url, timeout=10) as f:
             new_code = f.read().decode("utf-8")
+
         with open(script_path, "w", encoding="utf-8") as file:
             file.write(new_code)
+
         msg = "✅ Update complete. Restarting..." if lang == "EN" else "✅ Güncelleme tamamlandı. Program yeniden başlatılıyor..."
         log(msg, level="ACTION")
+
+        try:
+            import tkinter
+            for w in getattr(tkinter, "_default_root", {}).children.values():
+                try:
+                    w.destroy()
+                except:
+                    pass
+            if getattr(tkinter, "_default_root", None):
+                tkinter._default_root.destroy()
+        except Exception:
+            pass
+
         os.execv(sys.executable, [sys.executable] + sys.argv)
+
     except Exception as e:
+        import traceback
         log(f"Update failed: {e}" if lang == "EN" else f"Güncelleme başarısız: {e}", level="ERROR")
+        print(traceback.format_exc())
         return False
 
 # -------------------------
-# (Diğer kodlar: kategoriler, dosya sıralama, GUI, CLI)
+# (Diğer ana kodun - kategori, dosya taşıma, GUI fonksiyonları vs.)
 # -------------------------
-# 💡 Bu kısmı değiştirmedik — orijinal kodun aynı şekilde devam ediyor
-
-# ... (Senin mevcut "CATEGORIES", "get_category_for_extension", "choose_language", 
-# "get_file_stats", "move_files_with_progress", "run_gui", "run_cli" fonksiyonları burada tamamen aynı şekilde kalacak)
-# ...
+# Buraya senin mevcut File Sorter fonksiyonlarının tamamı değişmeden gelecek
+# (örneğin get_category_for_extension, run_gui, run_cli, vb.)
 
 # -------------------------
 # Main
@@ -194,7 +215,6 @@ def check_for_update(current_version, version_url, script_url, changelog_url, sc
 if __name__ == "__main__":
     is_cli = len(sys.argv) > 1 and sys.argv[1].lower() == "cli"
 
-    # Dil seçimi (ilk açılışta)
     if LANG is None:
         try:
             lang_choice = input("Select language / Dil seçin (EN/TR): ").strip().upper()
@@ -202,7 +222,6 @@ if __name__ == "__main__":
         except Exception:
             LANG = "EN"
 
-    # Güncelleme kontrolü (GUI veya CLI moduna göre)
     check_for_update(
         __version__,
         VERSION_URL,
