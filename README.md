@@ -42,9 +42,9 @@ python3 --version
 
  On first run, the app installs itself automatically to:
 
-~/bin/file_sorter on Linux/macOS
+`~/bin/file_sorter` on Linux/macOS
 
-%USERPROFILE%\AppData\Local\Programs\file_sorter on Windows
+'%USERPROFILE\AppData\Local\Programs\file_sorter' on Windows
 
 
 After installation, you can use it directly from the terminal:
@@ -55,7 +55,7 @@ file_sorter
 
 ## Usage
 
-* 1. Terminal Mode
+* **1. Terminal Mode**
 
 Run File Sorter and specify a folder to organize:
 
@@ -65,7 +65,7 @@ This will sort all files in the specified folder into subfolders named after the
 
 
 
-* 2. GUI Mode
+* **2. GUI Mode**
 
 If you run the program without any arguments:
 
@@ -75,9 +75,7 @@ A graphical window will appear:
 
 1. Click Browse Folder to select a folder.
 
-
 2. Click Sort Files to organize them.
-
 
 3. A success message will appear once sorting is complete.
 
@@ -88,5 +86,5 @@ A graphical window will appear:
 
 - Turkish (TR)
 
-You will be prompted to select the language on first run.
+*You will be prompted to select the language on first run.*
 
