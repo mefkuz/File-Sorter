@@ -15,7 +15,7 @@ def install_and_import(package_name, import_name=None):
     try:
         return __import__(import_name)
     except ImportError:
-        print(⚠️ f"{package_name} bulunamadı, yükleniyor...")
+        print(f"⚠️ {package_name} bulunamadı, yükleniyor...")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", package_name])
             return __import__(import_name)
