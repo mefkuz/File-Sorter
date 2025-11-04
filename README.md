@@ -11,7 +11,7 @@ Once you run it for the first time, it installs required packages automatically 
 
 ## ✨ Features
 
-- 📁 Automatically sorts files into folders by **file type** (e.g., `jpg`, `pdf`, `txt` or `music`,`video`).  
+- 📁 Automatically sorts files into folders by **file type** (e.g., `jpg`, `pdf`, `txt` or `music`, `video`).  
 - 💻 Works via **terminal (CLI)** or **GUI (CustomTkinter)**.  
 - ⚙️ **Self-installing dependencies** – missing packages are automatically installed on first run.  
 - 🧩 Handles duplicate filenames and files **without extensions**.  
