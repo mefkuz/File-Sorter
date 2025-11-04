@@ -23,15 +23,6 @@ Once you run it for the first time, it installs required packages automatically 
 
 ## ⚙️ Installation & First Run
 
-### Clone the repository
-
-```bash
-git clone https://github.com/username/file_sorter.git
-cd file_sorter
-
-
-
-## ⚙️ Installation & First Run
 
 ###  Clone the repository in linux
 
