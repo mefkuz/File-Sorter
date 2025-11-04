@@ -1,20 +1,33 @@
-# 🗂️ File Sorter
+# 🗂️ File Sorter v2.0
 
 **File Sorter** is a lightweight Python application that automatically organizes your files by extension.  
-It supports both **terminal (CLI)** and **graphical user interface (GUI)** modes.
+It supports both **terminal (CLI)** and **graphical user interface (GUI)** modes.  
 
-Once you run it for the first time, it installs itself automatically, allowing you to use `file_sorter` directly from the terminal anytime.
+This version includes a modern **CustomTkinter GUI**, optional **subfolder inclusion**, and enhanced logging with progress updates.  
+
+Once you run it for the first time, it installs required packages automatically and can be used directly via terminal or GUI.
 
 
 
 ## ✨ Features
 
-- 📁 Automatically sorts files into folders by **file type** (e.g., `jpg`, `pdf`, `txt`).
-- 💻 Works via **terminal** or **GUI (Tkinter)**.
-- ⚙️ **Self-installing CLI** – after the first run, you can use `file_sorter` directly.
-- 🧩 Handles duplicate filenames and files without extensions.
-- 🪟 Cross-platform: **Linux**, **macOS**, and **Windows**.
-- 🧼 Clean and simple interface.
+- 📁 Automatically sorts files into folders by **file type** (e.g., `jpg`, `pdf`, `txt`).  
+- 💻 Works via **terminal (CLI)** or **GUI (CustomTkinter)**.  
+- ⚙️ **Self-installing dependencies** – missing packages are automatically installed on first run.  
+- 🧩 Handles duplicate filenames and files **without extensions**.  
+- ✔️ Option to **include subfolders** when sorting.  
+- 🪟 Cross-platform: **Linux**, **macOS**, and **Windows**.  
+- 🧼 Clean and modern **GUI interface** with live logs.  
+- 💡 Shows progress bar and detailed **file statistics** before sorting.  
+
+
+## ⚙️ Installation & First Run
+
+### Clone the repository
+
+```bash
+git clone https://github.com/username/file_sorter.git
+cd file_sorter
 
 
 
@@ -96,4 +109,12 @@ A graphical window will appear:
 
 3. A success message will appear once sorting is complete.
 
+
+Supported Languages
+
+- English (EN)
+
+- Turkish (TR)
+
+You will be prompted to select the language on first run.
 
