@@ -9,7 +9,7 @@ Once you run it for the first time, it installs required packages automatically 
 
 
 
-## ✨ Features
+## Features
 
 - 📁 Automatically sorts files into folders by **file type** (e.g., `jpg`, `pdf`, `txt` or `music`, `video`).  
 - 💻 Works via **terminal (CLI)** or **GUI (CustomTkinter)**.  
@@ -21,7 +21,7 @@ Once you run it for the first time, it installs required packages automatically 
 - 💡 Shows progress bar and detailed **file statistics** before sorting.  
 
 
-## ⚙️ Installation & First Run
+## Installation & First Run
 
 
 ###  Clone the repository in linux
