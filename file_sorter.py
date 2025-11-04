@@ -160,7 +160,7 @@ def get_category_for_extension(ext: str, lang: str) -> str:
 def choose_language():
     global LANG
     if LANG is None:
-        lang_choice = input("Select language / Dil seçin (EN/TR): ").strip().upper()
+        lang_choice = input(MESSAGES.get(None, {}).get("select_language", "Select language / Dil seçin (EN/TR): ")).strip().upper()
         LANG = "TR" if lang_choice == "TR" else "EN"
 
 # -------------------------
@@ -171,7 +171,6 @@ def get_file_stats(folder: str, include_subfolders: bool = False):
     files = []
     extensions = {}
 
-    # Klasör yoksa boş dönsün, hata loglamasını CLI/GUI kısmında yapıyoruz
     if not os.path.exists(folder):
         return [], [], {}
 
@@ -190,7 +189,7 @@ def get_file_stats(folder: str, include_subfolders: bool = False):
 # -------------------------
 # Dosya taşıma fonksiyonu
 # -------------------------
-def move_files_with_progress(folder: str, include_subfolders: bool = False, use_categories: bool = False, auto_confirm: bool = False, gui_widget=None):
+def move_files_with_progress(folder: str, include_subfolders: bool = False, use_categories: bool = False, gui_widget=None, progress_bar_widget=None):
     if not os.path.exists(folder):
         log_msg("folder_not_found", folder, level="ERROR", gui_widget=gui_widget)
         return
@@ -208,6 +207,13 @@ def move_files_with_progress(folder: str, include_subfolders: bool = False, use_
     total_files = len(files)
 
     for idx, file_path in enumerate(files, start=1):
+        # Eğer progress bar varsa, her 50 dosyada bir GUI log'a yazma işlemini yavaşlat
+        if gui_widget and progress_bar_widget and idx % 50 != 0:
+            pass # Log yazma atlanıyor, sadece progress bar güncellenecek
+        else:
+            log(f"Processing: {os.path.basename(file_path)}...", level="INFO", gui_widget=gui_widget)
+
+
         folder_path, filename = os.path.split(file_path)
         base, extension = os.path.splitext(filename)
         ext = extension.lower()
@@ -229,27 +235,41 @@ def move_files_with_progress(folder: str, include_subfolders: bool = False, use_
         try:
             shutil.move(file_path, dest)
             moved_count += 1
-            if not gui_widget: # CLI'da loglamayı sadece ilerleme çubuğu güncellendikten sonra yapalım
-                 log(f"{filename} → {target_folder_name}", level="ACTION")
+            if gui_widget and (idx % 50 == 0 or idx == total_files):
+                # GUI'de sadece belli aralıklarla veya sonda ACTION log yaz
+                log(f"{filename} → {target_folder_name} (Moved {moved_count}/{total_files})", level="ACTION", gui_widget=gui_widget)
+
         except Exception as e:
             error_count += 1
             log(f"Could not move {filename}: {e}", level="ERROR", gui_widget=gui_widget)
             if gui_widget:
                 messagebox.showerror(MESSAGES[LANG]["error_title"], f"{filename} taşınamadı: {e}")
 
-        # İlerleme çubuğu sadece CLI'da gösterilsin
+        # İlerleme çubuğu güncellemesi
+        progress_value = idx / total_files
+        if progress_bar_widget:
+            progress_bar_widget.set(progress_value)
+            # GUI'nin güncellenmesini zorla (görsel akıcılık için kritik)
+            progress_bar_widget.master.update_idletasks()
+        
+        # İlerleme çubuğu sadece CLI'da gösterilsin (GUI_widget yoksa)
         if not gui_widget:
-            progress = int((idx / total_files) * 30)
+            progress = int(progress_value * 30)
             bar = "█" * progress + "-" * (30 - progress)
             print(f"\r[{bar}] {idx}/{total_files} files moved/attempted", end="", flush=True)
 
     if not gui_widget:
-        print()
+        print() # CLI progress bar satır sonu
 
     log_msg("sorting_complete", level="INFO", gui_widget=gui_widget)
     log_msg("files_moved", moved_count, level="INFO", gui_widget=gui_widget)
     log_msg("errors", error_count, level="INFO", gui_widget=gui_widget)
     log_msg("skipped", len(all_items) - len(files), level="INFO", gui_widget=gui_widget)
+    
+    # İşlem bitince progress barı tam (1.0) yap
+    if progress_bar_widget:
+        progress_bar_widget.set(1.0)
+
 
 # -------------------------
 # GUI
@@ -261,7 +281,7 @@ def run_gui():
 
     root = ctk.CTk()
     root.title(f"File Sorter v{__version__}")
-    root.geometry("600x450")
+    root.geometry("600x480") # Progress bar için biraz yer açıldı
     root.resizable(False, False)
 
     folder_frame = ctk.CTkFrame(root)
@@ -291,6 +311,11 @@ def run_gui():
     category_cb = ctk.CTkCheckBox(root, text=MESSAGES[LANG]["use_categories"], variable=category_var)
     category_cb.pack(pady=(0, 10), padx=20, anchor="w")
 
+    # YENİ EKLEME: İlerleme Çubuğu Widget'ı
+    progress_bar = ctk.CTkProgressBar(root, orientation="horizontal")
+    progress_bar.set(0) # Başlangıç değeri
+    progress_bar.pack(pady=(0, 15), padx=20, fill="x")
+
     log_frame = ctk.CTkFrame(root)
     log_text = ctk.CTkTextbox(log_frame, width=560, height=150)
     log_text.pack(fill="both", expand=True)
@@ -300,12 +325,19 @@ def run_gui():
         if not folder:
             messagebox.showwarning(MESSAGES[LANG]["error_title"], MESSAGES[LANG]["select_folder_error"])
             return
+            
+        # Önceden bulunan dosyaları temizle ve progress barı sıfırla
+        log_text.delete("1.0", "end") 
+        progress_bar.set(0)
+
         include_subfolders = include_var.get()
         use_categories = category_var.get()
         confirm = messagebox.askyesno(MESSAGES[LANG]["confirm_title"], MESSAGES[LANG]["confirm_gui_sort"])
+        
         if confirm:
             log_frame.pack(pady=5, padx=20, fill="both", expand=True)
-            move_files_with_progress(folder, include_subfolders, use_categories, gui_widget=log_text)
+            # Progress bar'ı parametre olarak gönder
+            move_files_with_progress(folder, include_subfolders, use_categories, gui_widget=log_text, progress_bar_widget=progress_bar)
             messagebox.showinfo(MESSAGES[LANG]["result_title"], MESSAGES[LANG]["result_sorted"])
 
     sort_btn = ctk.CTkButton(root, text=MESSAGES[LANG]["sort_button"], command=sort_files_gui,
@@ -362,7 +394,8 @@ def run_cli():
     if confirmation in ["y", "e"]:
         # İşleme devam et
         print("-" * 50)
-        move_files_with_progress(folder, include_subfolders, use_categories)
+        # CLI'da progress bar widget'ı göndermeye gerek yok
+        move_files_with_progress(folder, include_subfolders, use_categories) 
         print("-" * 50)
     else:
         # İptal et
@@ -376,4 +409,3 @@ if __name__ == "__main__":
         run_cli()
     else:
         run_gui()
-
