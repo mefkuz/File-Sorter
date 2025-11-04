@@ -32,13 +32,13 @@ cd file_sorter
 ```
 
 
-## Make sure Python 3 is installed
+### Make sure Python 3 is installed
    
 ```bash
 python3 --version
 ```
 
-## Run the program for the first time
+### Run the program for the first time
 
  On first run, the app installs itself automatically to:
 
@@ -80,7 +80,7 @@ A graphical window will appear:
 3. A success message will appear once sorting is complete.
 
 
-# Supported Languages
+## Supported Languages
 
 - English (EN)
 
