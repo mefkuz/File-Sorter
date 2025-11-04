@@ -66,7 +66,7 @@ MESSAGES = {
         "select_language": "Select language / Dil seçin (EN/TR): ",
         "folder_not_found": "Folder not found: {}",
         "no_files": "No files found in the selected folder.",
-        "confirm_text": "Total items: {}\nFiles: {}\nFile types:\n{}\nDo you want to sort these files?",
+        "confirm_text": "Total items: {}\nFiles to sort: {}\nFile types:\n{}\n\nDo you want to proceed with sorting?",
         "sorting_canceled": "Sorting canceled by user.",
         "sorting_complete": "Sorting complete.",
         "files_moved": "Files moved: {}",
@@ -81,13 +81,19 @@ MESSAGES = {
         "sort_button": "Sort Files",
         "confirm_title": "Confirm Sorting",
         "result_title": "Result",
-        "error_title": "Error"
+        "error_title": "Error",
+        
+        # CLI Specific Prompts
+        "enter_folder_path": "Enter folder path: ",
+        "include_subfolders_cli": "Include subfolders? (y/n): ",
+        "use_categories_cli": "Sort by categories? (y/n): ",
+        "proceed_confirmation": "Proceed? (y/n): "
     },
     "TR": {
         "select_language": "Dil seçin / Select language (TR/EN): ",
         "folder_not_found": "Klasör bulunamadı: {}",
         "no_files": "Seçilen klasörde dosya bulunamadı.",
-        "confirm_text": "Toplam öğe: {}\nDosyalar: {}\nDosya türleri:\n{}\nBu dosyaları sıralamak istiyor musunuz?",
+        "confirm_text": "Toplam öğe: {}\nSıralanacak dosyalar: {}\nDosya türleri:\n{}\n\nSıralama işlemine devam etmek istiyor musunuz?",
         "sorting_canceled": "Sıralama kullanıcı tarafından iptal edildi.",
         "sorting_complete": "Sıralama tamamlandı.",
         "files_moved": "Taşınan dosya sayısı: {}",
@@ -102,7 +108,13 @@ MESSAGES = {
         "sort_button": "Dosyaları Sırala",
         "confirm_title": "Sıralamayı Onayla",
         "result_title": "Sonuç",
-        "error_title": "Hata"
+        "error_title": "Hata",
+
+        # CLI Specific Prompts
+        "enter_folder_path": "Klasör yolunu girin: ",
+        "include_subfolders_cli": "Alt klasörleri dahil et? (e/h): ",
+        "use_categories_cli": "Kategorilere göre sırala? (e/h): ",
+        "proceed_confirmation": "Devam edilsin mi? (e/h): "
     }
 }
 
@@ -159,6 +171,10 @@ def get_file_stats(folder: str, include_subfolders: bool = False):
     files = []
     extensions = {}
 
+    # Klasör yoksa boş dönsün, hata loglamasını CLI/GUI kısmında yapıyoruz
+    if not os.path.exists(folder):
+        return [], [], {}
+
     walker = os.walk(folder) if include_subfolders else [(folder, [], os.listdir(folder))]
     for root_dir, _, filenames in walker:
         for f in filenames:
@@ -185,7 +201,7 @@ def move_files_with_progress(folder: str, include_subfolders: bool = False, use_
         return
 
     log(f"Folder: {folder}", level="INFO", gui_widget=gui_widget)
-    log(f"Total items: {len(all_items)} | Files: {len(files)}", level="INFO", gui_widget=gui_widget)
+    log(f"Total items: {len(all_items)} | Files to move: {len(files)}", level="INFO", gui_widget=gui_widget)
 
     moved_count = 0
     error_count = 0
@@ -213,17 +229,19 @@ def move_files_with_progress(folder: str, include_subfolders: bool = False, use_
         try:
             shutil.move(file_path, dest)
             moved_count += 1
-            log(f"{filename} → {target_folder_name}", level="ACTION", gui_widget=gui_widget)
+            if not gui_widget: # CLI'da loglamayı sadece ilerleme çubuğu güncellendikten sonra yapalım
+                 log(f"{filename} → {target_folder_name}", level="ACTION")
         except Exception as e:
             error_count += 1
             log(f"Could not move {filename}: {e}", level="ERROR", gui_widget=gui_widget)
             if gui_widget:
                 messagebox.showerror(MESSAGES[LANG]["error_title"], f"{filename} taşınamadı: {e}")
 
-        progress = int((idx / total_files) * 30)
-        bar = "█" * progress + "-" * (30 - progress)
+        # İlerleme çubuğu sadece CLI'da gösterilsin
         if not gui_widget:
-            print(f"\r[{bar}] {idx}/{total_files} files", end="", flush=True)
+            progress = int((idx / total_files) * 30)
+            bar = "█" * progress + "-" * (30 - progress)
+            print(f"\r[{bar}] {idx}/{total_files} files moved/attempted", end="", flush=True)
 
     if not gui_widget:
         print()
@@ -304,13 +322,51 @@ def run_gui():
 # -------------------------
 def run_cli():
     choose_language()
-    folder = input("Enter folder path: ").strip()
+    
+    # Klasör yolu ve seçenekleri al
+    folder = input(MESSAGES[LANG]["enter_folder_path"]).strip()
     if not folder:
         log_msg("select_folder_error", level="ERROR")
         return
-    include_subfolders = input("Include subfolders? (y/n): ").strip().lower() in ("y", "e")
-    use_categories = input("Sort by categories? (y/n): ").strip().lower() in ("y", "e")
-    move_files_with_progress(folder, include_subfolders, use_categories)
+    
+    if not os.path.exists(folder):
+        log_msg("folder_not_found", folder, level="ERROR")
+        return
+
+    include_subfolders = input(MESSAGES[LANG]["include_subfolders_cli"]).strip().lower() in ("y", "e")
+    use_categories = input(MESSAGES[LANG]["use_categories_cli"]).strip().lower() in ("y", "e")
+
+    # Dosya istatistiklerini topla
+    all_items, files, extensions = get_file_stats(folder, include_subfolders)
+
+    if not files:
+        log_msg("no_files", level="INFO")
+        return
+
+    # Uzantıları okunabilir hale getir
+    ext_list = "\n".join([f"  .{ext}: {count}" for ext, count in extensions.items()])
+    
+    # Onay mesajını hazırla
+    confirm_message = MESSAGES[LANG]["confirm_text"].format(
+        len(all_items), 
+        len(files),     
+        ext_list        
+    )
+
+    # Onay iste
+    print("-" * 50)
+    print(confirm_message)
+    confirmation = input(MESSAGES[LANG]["proceed_confirmation"]).strip().lower()
+
+    # Onayı kontrol et ('y' veya 'e' kabul)
+    if confirmation in ["y", "e"]:
+        # İşleme devam et
+        print("-" * 50)
+        move_files_with_progress(folder, include_subfolders, use_categories)
+        print("-" * 50)
+    else:
+        # İptal et
+        log_msg("sorting_canceled", level="INFO")
 
 # -------------------------
 # Main
@@ -320,3 +376,4 @@ if __name__ == "__main__":
         run_cli()
     else:
         run_gui()
+
